@@ -18,10 +18,13 @@ After running the script the user will have the data saved in a CSV file.
 Requirements:
 
 Python 3
+
 PIP
 
 You will need to use PIP to install the following libraries:
 
 bs4
+
 requests
+
 pandas
