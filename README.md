@@ -7,9 +7,9 @@ The purpose of this repository is to have a script that automatically pulls down
 
 How to use it?
 
-Just run the futbin2.py
+Just run the futbin2.py:
 
-Doing: python futbin2.py to get Futbin data.
+Doing "python futbin2.py" to get Futbin data.
 
 Players data ouput format:
 
