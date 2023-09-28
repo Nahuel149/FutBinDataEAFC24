@@ -9,7 +9,7 @@ import MySQLdb
 mysql_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Drac0456149!',
+    'password': 'your_password',
     'database': 'FUTBIN'
 }
 
