@@ -17,16 +17,16 @@ mysql_config = {
 data = []
 
 fifa = {
-    '24': 'FIFA24'
+    '24': 'EA FC24'
 }
 
-cardColumns = ['ID', 'Name', 'Rating', 'Price', 'SkillsMoves', 'WeakFoot',
+cardColumns = ['ID', 'Name', 'Rating', 'Price', 'PercentageChange', 'SkillsMoves', 'WeakFoot',
                'Pace', 'Shooting', 'Passing', 'Dribbling', 'Defending',
-               'Physicality', 'Height', 'Popularity', 'Inches', 'Unknown', 'Totalsum',
-               'Ingamesum', 'Nothing', 'Position', 'Club',
+               'Physicality', 'Height', 'Division', 'Inches', 'Popularity', 
+               'BaseStats', 'IngameStats', 'Nothing', 'Position', 'Club',
                'Country', 'League', 'NationPic', 'ClubPic', 'PlayerPic']
 
-C = open('FutBinCards24.csv', 'w')  # Change the output file name if needed
+C = open('FutBinCards24.csv', 'w')  
 C.write(','.join(cardColumns) + '\n')
 C.close()
 
@@ -40,7 +40,7 @@ for key, value in fifa.items():
         TotalPages = str(bs.findAll('li', {'class': 'page-item '})[-1].text).strip()
     except IndexError:
         TotalPages = str(bs.findAll('li', {'class': 'page-item'})[-2].text).strip()
-    print('Number of pages to be parsed for FIFA ' + key + ' is ' + TotalPages + ' Pages')
+    print('Number of pages to be parsed for EA FC ' + key + ' is ' + TotalPages + ' Pages')
     for page in range(1, int(TotalPages) + 1):
         FutBin = requests.get('https://www.futbin.com/' + key + '/players?page=' + str(page), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'})
         bs = BeautifulSoup(FutBin.text, 'html.parser')
@@ -56,7 +56,7 @@ for key, value in fifa.items():
             if player_name_element:
                 player_full_name = player_name_element.text.strip()
             else:
-                player_full_name = 'N/A'  # Set a default value if player name is not found
+                player_full_name = 'N/A'
 
             # Extract skills and weak foot ratings
             skills_weak_foot = cardDetails.findAll('td')[7].text.strip().split()
@@ -64,8 +64,8 @@ for key, value in fifa.items():
                 SkillsMoves = skills_weak_foot[0]
                 WeakFoot = skills_weak_foot[1]
             else:
-                SkillsMoves = 'N/A'  # or any default value you prefer
-                WeakFoot = 'N/A'  # or any default value you prefer
+                SkillsMoves = 'N/A'  
+                WeakFoot = 'N/A'  
 
             # Extract WorkRate and split it into two values
             work_rates = cardDetails.findAll('td')[8].text.strip().split()
@@ -118,50 +118,58 @@ for key, value in fifa.items():
                 print("Element with id 'info_content' not found on the page.")
 
         df = pd.DataFrame(Card, columns=cardColumns)
+        df['PercentageChange'] = df['PercentageChange'].str.rstrip('%').astype(float)
         print(df)
         df.to_csv('FutBinCards24.csv', mode='a', header=False, sep=',', encoding='utf-8', index=False)
 
-        # After collecting the data in the 'Card' list
-        # Initialize a pandas DataFrame with the collected data
+        # After collecting the data in the 'Card' list: Initialize a pandas DataFrame with the collected data
         df = pd.DataFrame(Card, columns=cardColumns)
 
         # Establish a connection to the MySQL database
         conn = MySQLdb.connect(**mysql_config)
-
-        # Create a MySQL cursor
         cursor = conn.cursor()
 
         # Iterate through the DataFrame and insert rows into the MySQL table
         for _, row in df.iterrows():
-            # Create a dictionary to store the column values
             insert_values = {}
-
             # Iterate over the columns you want to check for empty values
             for column_name in cardColumns:
-                if column_name in ('Nothing', 'Unknown'):
-                    if row[column_name] == '':
-                        insert_values[column_name] = None  # Set to NULL if the data is empty
+                if column_name == 'Height':
+                    # Handle the 'Height' column by extracting the numeric part
+                    height_str = row[column_name]
+                    # Extract the numeric part (height in centimeters)
+                    numeric_height_str = re.search(r'\d+', height_str)
+                    if numeric_height_str:
+                        height_cm = int(numeric_height_str.group())
                     else:
-                        try:
-                            insert_values[column_name] = int(row[column_name])  # Convert the valid integer value
-                        except ValueError:
-                            insert_values[column_name] = None  # Set to NULL if the value can't be converted to an integer
+                        height_cm = None  # Set to None if no numeric part is found
+                    insert_values[column_name] = height_cm
+                elif column_name in ('SkillsMoves', 'WeakFoot', 'Pace', 'Shooting', 'Passing', 'Dribbling', 'Defending', 'Physicality'):
+                    # Handle columns that should be integers
+                    value_str = row[column_name]
+                    try:
+                        value = int(value_str)
+                    except ValueError:
+                        value = None  # Set to None if the conversion fails
+                    insert_values[column_name] = value
+                elif column_name == 'PercentageChange':
+                    # Handle the 'PercentageChange' column as a float (remove '%' sign)
+                    percentage_change_str = row[column_name].replace('%', '').strip()
+                    try:
+                        percentage_change = float(percentage_change_str)
+                    except ValueError:
+                        percentage_change = None  # Set to None if the conversion fails
+                    insert_values[column_name] = percentage_change
                 else:
-                    if row[column_name] == '':
-                        insert_values[column_name] = None  # Set to NULL if the data is empty
-                    else:
-                        if column_name in ('SkillsMoves', 'WeakFoot', 'Pace', 'Shooting', 'Passing', 'Dribbling', 'Defending', 'Physicality'):
-                            insert_values[column_name] = int(row[column_name])  # Convert the valid integer value
-                        else:
-                            insert_values[column_name] = row[column_name]
+                    # Handle other columns as before
+                    insert_values[column_name] = row[column_name]
 
             # Define your INSERT statement based on your table structure
             insert_sql = """
-            INSERT INTO EAFC24 (Name, Rating, Price, SkillsMoves, WeakFoot, Pace, Shooting, Passing, Dribbling, Defending, Physicality, Height, Popularity, Inches, Unknown, Totalsum, Ingamesum, Nothing, Position, Club, Country, League, NationPic, ClubPic, PlayerPic)
-            VALUES (%(Name)s, %(Rating)s, %(Price)s, %(SkillsMoves)s, %(WeakFoot)s, %(Pace)s, %(Shooting)s, %(Passing)s, %(Dribbling)s, %(Defending)s, %(Physicality)s, %(Height)s, %(Popularity)s, %(Inches)s, %(Unknown)s, %(Totalsum)s, %(Ingamesum)s, %(Nothing)s, %(Position)s, %(Club)s, %(Country)s, %(League)s, %(NationPic)s, %(ClubPic)s, %(PlayerPic)s)
+            INSERT INTO EAFC24 (Name, Rating, Price, PercentageChange, SkillsMoves, WeakFoot, Pace, Shooting, Passing, Dribbling, Defending, Physicality, Height, Division, Inches, Popularity, BaseStats, IngameStats, Nothing, Position, Club, Country, League, NationPic, ClubPic, PlayerPic)
+            VALUES (%(Name)s, %(Rating)s, %(Price)s, %(PercentageChange)s, %(SkillsMoves)s, %(WeakFoot)s, %(Pace)s, %(Shooting)s, %(Passing)s, %(Dribbling)s, %(Defending)s, %(Physicality)s, %(Height)s, %(Division)s, %(Inches)s, %(Popularity)s, %(BaseStats)s, %(IngameStats)s, %(Nothing)s, %(Position)s, %(Club)s, %(Country)s, %(League)s, %(NationPic)s, %(ClubPic)s, %(PlayerPic)s)
             """
             
-            # Execute the INSERT statement with the insert_values dictionary
             cursor.execute(insert_sql, insert_values)
 
         # Commit the changes and close the cursor and connection
