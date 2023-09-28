@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS EAFC24 (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     Name VARCHAR(255),
     Rating INT,
-    Price INT,
+    Price VARCHAR(255),
     PercentageChange VARCHAR(255),
     SkillsMoves INT,
     WeakFoot INT,
@@ -51,18 +51,27 @@ CREATE TABLE IF NOT EXISTS EAFC24 (
     Defending INT,
     Physicality INT,
     Height VARCHAR(255),
-    Popularity VARCHAR(255),
+    Division VARCHAR(255),
     Inches VARCHAR(255),
-    Unknown VARCHAR(255),
-    Totalsum VARCHAR(255),
-    Ingamesum VARCHAR(255),
-    Nothing INT,
+    Popularity VARCHAR(255),
+    BaseStats VARCHAR(255),
+    IngameStats VARCHAR(255),
+    Nothing VARCHAR(255),
     Position VARCHAR(255),
     Club VARCHAR(255),
     Country VARCHAR(255),
     League VARCHAR(255),
     NationPic VARCHAR(255),
-    Clubpic VARCHAR(255),
+    ClubPic VARCHAR(255),
     PlayerPic VARCHAR(255),
     LOADDATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+To create/use the table do this in your MySQL 8.0 Command Line Client: 
+
+USE FUTBIN;
+then copy/paste my table
+DESCRIBE EAFC24; (to check if it's properly created)
+
+That's it now you can manage and choose what you need.
